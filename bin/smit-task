@@ -105,10 +105,13 @@ cmd_init() {
   echo "Repos for project '$project':"; printf '  %s\n' "${paths[@]}"
   read -r -p "Continue? [Y/n] " ans; [[ "${ans:-y}" =~ ^[Yy]$ ]] || exit 1
 
-  mkdir -p "$pdir"; touch "$pdir/repos.txt"
+  mkdir -p "$pdir/repos"; touch "$pdir/repos.txt"
+  local -a fresh=()
   for path in "${paths[@]}"; do
     orca_repos | awk -F'\t' -v p="$path" '$2==p {f=1} END {exit !f}' || orca repo add --path "$path" >/dev/null
     name="$(orca_repos | awk -F'\t' -v p="$path" '$2==p {print $1}')"
+    # Only repos without a note yet need mapping; already-reviewed notes stay untouched
+    [ -f "$pdir/repos/$name.md" ] || fresh+=("$name")
     printf '%s\t%s\n' "$name" "$path" >> "$pdir/repos.txt"
   done
   sort -u -o "$pdir/repos.txt" "$pdir/repos.txt"
@@ -116,8 +119,9 @@ cmd_init() {
   sync_settings
 
   echo "registered $(wc -l < "$pdir/repos.txt" | tr -d ' ') repos → $pdir/repos.txt"
-  echo "starting Claude to write $pdir/REPOS.md — review it before giving tasks"
-  cd "$ROOT" && exec claude "Lập bản đồ dự án $project theo mục \"Lập bản đồ dự án\" trong CLAUDE.md."
+  [ ${#fresh[@]} -gt 0 ] || { echo "no new repo to map"; exit 0; }
+  echo "starting Claude to map ${#fresh[@]} new repo(s) into $pdir/REPOS.md — review it before giving tasks"
+  cd "$ROOT" && exec claude "Lập bản đồ dự án $project theo mục \"Lập bản đồ dự án\" trong CLAUDE.md. Repo mới cần lập: ${fresh[*]}"
 }
 
 cmd_new() {
@@ -169,8 +173,11 @@ cmd_add() {
 
   for repo in "$@"; do
     [ -e "$dir/$repo" ] && { echo "$repo: already in task, skip" >&2; continue; }
+    # Only repos declared for the task's project: an unknown repo means the map is incomplete
+    awk -F'\t' -v r="$repo" '$1==r {f=1} END {exit !f}' "$ROOT/projects/$project/repos.txt" 2>/dev/null \
+      || die "repo '$repo' is not declared in project '$project' — ask the user; to add it: smit-task init $project <path-to-$repo>"
     src="$(orca_repos | awk -F'\t' -v r="$repo" '$1==r {print $2}')"
-    [ -n "$src" ] || die "repo '$repo' is not registered in Orca (see: orca repo list)"
+    [ -n "$src" ] || die "repo '$repo' is not registered in Orca (run: smit-task init $project <path-to-$repo>)"
 
     git -C "$src" fetch origin >&2 || true
     base="$(git -C "$src" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null || true)"

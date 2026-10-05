@@ -18,7 +18,11 @@ Dù task sửa 2 hay 10 repo, vẫn chỉ có một Claude điều phối. Nó n
 ## 4. Ba thứ làm nên công cụ
 
 ### a. Bản đồ dự án (`REPOS.md`): giúp Claude biết sửa ở đâu
-Giống tấm bản đồ: repo nào là BE, FE hay DB, tính năng nào nằm ở repo nào, cài và test thế nào. Bản đồ này Claude **tự viết** bằng cách đọc lướt các repo. Người dùng chỉ đọc lại và sửa chỗ sai. Bản đồ đúng thì Claude chọn repo đúng.
+Giống tấm bản đồ: repo nào là BE, FE hay DB, tính năng nào nằm ở repo nào, cài và test thế nào. Bản đồ này Claude **tự viết**: mỗi repo giao cho một agent con đọc riêng và ghi chú lại (`repos/<repo>.md`), rồi Claude ghép các ghi chú thành bản đồ. Cách này chạy được cả với dự án vài chục repo mà không bị quá tải.
+
+Người dùng chỉ đọc lại và sửa chỗ sai. Bản đồ đúng thì Claude chọn repo đúng.
+
+Không cần viết tay `CLAUDE.md` cho từng repo. Repo nào có sẵn thì Claude dùng, chưa có thì dùng ghi chú tự sinh. Thêm repo mới thì chạy lại `init`, Claude chỉ đọc repo mới.
 
 ### b. Worktree: chỗ làm việc riêng cho từng repo
 Worktree là một bản sao của repo trên nhánh riêng, sửa thoải mái mà không đụng code gốc. Mỗi repo của task có một worktree. Tất cả dùng chung tên nhánh `<tên-git>/<tên-task>`, nhìn là biết thuộc task nào.
@@ -71,6 +75,18 @@ Claude làm tự động nhưng có giới hạn:
 - **Không push, không tạo PR.** Bước đưa code lên luôn do người làm.
 - **Không chạy migration** lên DB thật.
 - `close` **không cho xóa** khi còn code chưa push, vì xóa worktree là mất luôn nhánh.
+- **Không biết sửa ở đâu thì dừng lại hỏi**, không sửa lung tung (xem mục dưới).
+
+### Khi Claude không biết sửa ở đâu
+Claude **không được đoán** hay sửa "cho có". Nó phải dừng lại khi:
+- bản đồ không có tính năng nào khớp yêu cầu,
+- tìm được repo nhưng không tìm ra file cụ thể,
+- code dẫn tới một repo **chưa khai báo** (ví dụ FE gọi một API mà không BE nào đã khai báo xử lý),
+- việc cần sửa nằm ngoài mọi repo đã khai báo.
+
+Khi dừng, Claude ghi vào `TASK.md` đã tìm ở đâu, tìm thấy gì, nghi thiếu repo nào, rồi hỏi người dùng. Người dùng có thể thêm repo còn thiếu bằng `smit-task init`, chỉ rõ chỗ cần sửa, hoặc làm rõ yêu cầu. Thông tin mới được ghi vào bản đồ để lần sau không phải hỏi lại.
+
+Ngoài lời dặn, script cũng chặn cứng: `smit-task add` **từ chối** tạo worktree cho repo không thuộc dự án của task.
 
 ## 8. Dùng cho mọi dự án
 Công cụ không gắn với dự án nào. Ai có dự án gì thì `init` dự án đó:

@@ -34,11 +34,11 @@ smit-task init <tên-dự-án> <thư-mục-chứa-các-repo | đường-dẫn-re
 Lệnh này:
 1. Tìm các repo, hỏi bạn xác nhận, thêm repo nào chưa có vào Orca.
 2. Cấp quyền cho Claude trên máy bạn: đọc repo gốc, sửa trong thư mục worktree, **không** sửa repo gốc, không đọc `.env`.
-3. Mở Claude để **tự viết bản đồ dự án** `projects/<dự-án>/REPOS.md`: repo nào lo việc gì, tính năng nào nằm ở repo nào, cách cài và test.
+3. Mở Claude để **tự viết bản đồ dự án**. Mỗi repo được một agent con đọc riêng và ghi chú vào `projects/<dự-án>/repos/<repo>.md`. Sau đó Claude ghép thành `projects/<dự-án>/REPOS.md`: repo nào lo việc gì, tính năng nào nằm ở repo nào, cách cài và test, kèm mục **"Chưa rõ / có thể thiếu repo"**.
 
-👉 **Đọc lại `REPOS.md` và sửa chỗ sai.** Bản đồ đúng thì agent chọn repo đúng.
+👉 **Đọc lại `REPOS.md` và sửa chỗ sai**, nhất là mục "Chưa rõ". Bản đồ đúng thì agent chọn repo đúng.
 
-Thêm repo mới vào dự án: chạy lại `smit-task init <dự-án> <repo-mới>`.
+Thêm repo mới vào dự án: chạy lại `smit-task init <dự-án> <repo-mới>`. Claude chỉ đọc repo mới, phần bản đồ đã duyệt giữ nguyên.
 
 ## 4. Dùng hằng ngày
 | Bước | Bạn làm |

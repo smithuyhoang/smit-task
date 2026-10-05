@@ -1,6 +1,7 @@
 # Bản đồ dự án: {{project}}
 
 _(Agent viết khi chạy `smit-task init`. Người dùng duyệt và sửa. Sai so với code → tin code, sửa file này.)_
+_(Chi tiết từng repo: `repos/<repo>.md`.)_
 
 ## Tổng quan
 _(1–3 dòng: dự án làm gì, kiến trúc chung — vd: FE gọi BE qua gateway, BE dùng chung 1 DB)_
@@ -24,3 +25,6 @@ _(FE gọi API qua đâu, BE nào lo prefix nào, thư viện dùng chung, schem
 _(vd: migration → BE → FE)_
 
 ## Điểm dễ sai
+
+## Chưa rõ / có thể thiếu repo
+_(FE gọi API mà chưa BE nào đã khai báo xử lý; repo được nhắc tới nhưng không có trong `repos.txt`; tính năng chưa xác định được repo)_
