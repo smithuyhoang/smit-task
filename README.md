@@ -18,7 +18,7 @@ Bạn tạo task, giao việc bằng lời. Agent tự xác định cần sửa 
 
 ## 2. Cài đặt (một lần)
 ```bash
-git clone <url-repo-smit-tasks> ~/smit-tasks        # đặt ở đâu cũng được
+git clone https://github.com/smithuyhoang/smit-task.git ~/smit-tasks        # đặt ở đâu cũng được
 chmod +x ~/smit-tasks/bin/*
 mkdir -p ~/.local/bin && ln -sf ~/smit-tasks/bin/smit-task ~/.local/bin/smit-task
 ```
