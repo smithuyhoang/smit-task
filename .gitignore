@@ -5,6 +5,7 @@
 !/CLAUDE.md
 !/bin/
 !/templates/
+!/docs/
 !/.claude/
 /.claude/*
 !/.claude/settings.json
