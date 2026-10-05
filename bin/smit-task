@@ -1,0 +1,238 @@
+#!/usr/bin/env bash
+# Multi-repo task helper: 1 task = 1 dir smit-tasks/<task> = 1 Orca folder card = 1 Claude session.
+#   smit-task init  <project> <repo|dir...>  register a project's repos, then Claude maps them (REPOS.md)
+#   smit-task new   <task> [project]         create task dir + Orca task card (group "tasks")
+#   smit-task add   <task> <repo...>         create a worktree per repo attached to the card, run its setup
+#   smit-task close <task> [--force]         remove worktrees + card + task dir (refuses unpushed work)
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+HERE="$ROOT/bin"
+
+die() { echo "smit-task: $*" >&2; exit 1; }
+rpc() { ELECTRON_RUN_AS_NODE=1 "${ORCA_APP:-/Applications/Orca.app}/Contents/MacOS/Orca" "$HERE/orca-rpc.js" "$@"; }
+json() { python3 -c "import json,sys; d=json.load(sys.stdin); $1"; }
+now() { date '+%Y-%m-%d %H:%M'; }
+need_orca() { orca status >/dev/null 2>&1 || die "Orca runtime not reachable (open the Orca app)"; }
+kebab() { [[ "${1:-}" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]] || die "name must be kebab-case: '${1:-}'"; }
+
+# "<name>\t<path>" for every repo registered in Orca
+orca_repos() { orca repo list --json | json "[print(r['displayName']+'\t'+r['path']) for r in d['result']['repos']]"; }
+
+# Append a line to the task log in TASK.md
+log() { printf -- '- %s %s\n' "$(now)" "$2" >> "$1/TASK.md"; }
+
+# Main checkouts of git repos at or under <dir> (skips linked worktrees and submodules)
+scan_repos() {
+  local dir="$1" g r
+  { [ -e "$dir/.git" ] && echo "$dir/.git"; find "$dir" -mindepth 2 -maxdepth 3 -name .git -not -path '*/node_modules/*' 2>/dev/null; } \
+  | while IFS= read -r g; do
+      r="$(dirname "$g")"
+      [ "$(git -C "$r" rev-parse --absolute-git-dir 2>/dev/null)" = "$(git -C "$r" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" ] || continue
+      [ -z "$(git -C "$r" rev-parse --show-superproject-working-tree 2>/dev/null)" ] || continue
+      echo "$r"
+    done
+}
+
+# Regenerate .claude/settings.local.json for this machine: Claude may read every project repo and
+# edit the Orca worktree dir, but never edit the original checkouts nor read .env files.
+sync_settings() {
+  python3 - "$ROOT" <<'PY'
+import glob, json, os, sys
+root = sys.argv[1]
+repos = set()
+for f in glob.glob(os.path.join(root, "projects", "*", "repos.txt")):
+    repos |= {l.rstrip("\n").split("\t", 1)[1] for l in open(f) if "\t" in l}
+try:
+    data = json.load(open(os.path.expanduser("~/Library/Application Support/orca/orca-data.json")))
+    wsdir = data.get("settings", {}).get("workspaceDir") or ""
+except (OSError, ValueError):
+    wsdir = ""
+dirs = sorted(repos | ({wsdir} if wsdir else set()))
+deny = [f"Edit(/{p}/**)" for p in sorted(repos) if not (wsdir + "/").startswith(p.rstrip("/") + "/")]
+deny += [f"Read(/{d}/**/.env)" for d in dirs]
+out = {"permissions": {"additionalDirectories": dirs, "deny": deny}}
+with open(os.path.join(root, ".claude", "settings.local.json"), "w") as fh:
+    json.dump(out, fh, indent=2, ensure_ascii=False)
+PY
+}
+
+# Run the repo's own setup inside a fresh worktree: project hook (env/config), then orca.yaml scripts.setup
+setup_worktree() {
+  local project="$1" repo="$2" src="$3" wt="$4" hook="$ROOT/projects/$1/setup-worktree.sh" script
+  [ -x "$hook" ] && { "$hook" "$repo" "$src" "$wt" >&2 || return 1; }
+  script="$(python3 - "$wt/orca.yaml" <<'PY'
+import re, sys
+try:
+    lines = open(sys.argv[1]).read().splitlines()
+except OSError:
+    sys.exit()
+out, indent = [], None
+for i, line in enumerate(lines):
+    if indent is None:
+        if re.match(r"\s+setup:\s*\|\s*$", line) and any(re.match(r"scripts:\s*$", l) for l in lines[:i]):
+            indent = len(line) - len(line.lstrip()) + 1
+    elif line.strip() and len(line) - len(line.lstrip()) < indent:
+        break
+    else:
+        out.append(line.strip())
+print("\n".join(out))
+PY
+)"
+  if [ -z "$script" ]; then [ -x "$hook" ] && return 0 || return 2; fi
+  (cd "$wt" && bash -e -c "$script") >&2
+}
+
+cmd_init() {
+  local project="${1:-}" pdir arg path name ans
+  local -a paths=()
+  kebab "$project"; shift || true
+  [ $# -gt 0 ] || die "usage: smit-task init <project> <repo-name|repo-dir|parent-dir...>"
+  need_orca
+  pdir="$ROOT/projects/$project"
+
+  for arg in "$@"; do
+    if [ -d "$arg" ]; then
+      while IFS= read -r path; do paths+=("$path"); done < <(scan_repos "$(cd "$arg" && pwd)")
+    else
+      path="$(orca_repos | awk -F'\t' -v r="$arg" '$1==r {print $2}')"
+      [ -n "$path" ] || die "'$arg' is neither a directory nor a repo registered in Orca"
+      paths+=("$path")
+    fi
+  done
+  [ ${#paths[@]} -gt 0 ] || die "no git repo found"
+
+  echo "Repos for project '$project':"; printf '  %s\n' "${paths[@]}"
+  read -r -p "Continue? [Y/n] " ans; [[ "${ans:-y}" =~ ^[Yy]$ ]] || exit 1
+
+  mkdir -p "$pdir"; touch "$pdir/repos.txt"
+  for path in "${paths[@]}"; do
+    orca_repos | awk -F'\t' -v p="$path" '$2==p {f=1} END {exit !f}' || orca repo add --path "$path" >/dev/null
+    name="$(orca_repos | awk -F'\t' -v p="$path" '$2==p {print $1}')"
+    printf '%s\t%s\n' "$name" "$path" >> "$pdir/repos.txt"
+  done
+  sort -u -o "$pdir/repos.txt" "$pdir/repos.txt"
+  [ -f "$pdir/REPOS.md" ] || sed "s/{{project}}/$project/g" "$ROOT/templates/REPOS.md" > "$pdir/REPOS.md"
+  sync_settings
+
+  echo "registered $(wc -l < "$pdir/repos.txt" | tr -d ' ') repos → $pdir/repos.txt"
+  echo "starting Claude to write $pdir/REPOS.md — review it before giving tasks"
+  cd "$ROOT" && exec claude "Lập bản đồ dự án $project theo mục \"Lập bản đồ dự án\" trong CLAUDE.md."
+}
+
+cmd_new() {
+  local task="${1:-}" project="${2:-}" dir projects group_ids group_id id
+  kebab "$task"; dir="$ROOT/$task"
+  [ -e "$dir" ] && die "$dir already exists"
+  projects="$(ls "$ROOT/projects" 2>/dev/null || true)"
+  if [ -z "$project" ]; then
+    case "$(printf '%s' "$projects" | grep -c .)" in
+      0) die "no project yet (run: smit-task init <project> <repo|dir...>)" ;;
+      1) project="$projects" ;;
+      *) die "pick a project: smit-task new $task <$(echo $projects | tr ' ' '|')>" ;;
+    esac
+  fi
+  [ -f "$ROOT/projects/$project/repos.txt" ] || die "unknown project '$project'"
+  need_orca
+
+  # Exactly one "tasks" group; never create a duplicate
+  group_ids="$(rpc projectGroup.list | json "print('\n'.join(g['id'] for g in d['groups'] if g['name']=='tasks'))")"
+  case "$(printf '%s' "$group_ids" | grep -c .)" in
+    0) group_id="$(rpc projectGroup.create "{\"name\":\"tasks\",\"parentPath\":\"$ROOT\"}" | json "print(d['group']['id'])")" ;;
+    1) group_id="$group_ids" ;;
+    *) die "more than one Orca group named 'tasks'; fix it in Orca first" ;;
+  esac
+
+  mkdir -p "$dir"
+  sed -e "s/{{task}}/$task/g" -e "s/{{project}}/$project/g" "$ROOT/templates/TASK.md" > "$dir/TASK.md"
+  echo "$project" > "$dir/.project"
+  id="$(rpc folderWorkspace.create "{\"projectGroupId\":\"$group_id\",\"name\":\"$task\",\"folderPath\":\"$dir\"}" \
+    | json "print(d['folderWorkspace']['id'])")" || { rm -rf "$dir"; die "could not create Orca card"; }
+  echo "$id" > "$dir/.orca-folder-id"
+  # Claude loads project settings from the cwd only; share the smit-tasks ones
+  ln -s ../.claude "$dir/.claude"
+  log "$dir" "Tạo task (dự án $project) + thẻ Orca \`folder:$id\`"
+
+  echo "task:  $dir (project $project)"
+  echo "card:  folder:$id (Orca sidebar → group 'tasks' → '$task')"
+  echo "next:  open the card in Orca, then run: claude"
+}
+
+cmd_add() {
+  local task="${1:-}" dir card project repo src base out wt status rc
+  kebab "$task"; dir="$ROOT/$task"; shift || true
+  [ -f "$dir/.orca-folder-id" ] || die "unknown task '$task' (run: smit-task new $task)"
+  [ $# -gt 0 ] || die "usage: smit-task add <task> <repo...>"
+  need_orca
+  card="folder:$(cat "$dir/.orca-folder-id")"
+  project="$(cat "$dir/.project" 2>/dev/null || true)"
+
+  for repo in "$@"; do
+    [ -e "$dir/$repo" ] && { echo "$repo: already in task, skip" >&2; continue; }
+    src="$(orca_repos | awk -F'\t' -v r="$repo" '$1==r {print $2}')"
+    [ -n "$src" ] || die "repo '$repo' is not registered in Orca (see: orca repo list)"
+
+    git -C "$src" fetch origin >&2 || true
+    base="$(git -C "$src" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null || true)"
+    out="$(orca worktree create --repo "name:$repo" --name "$task" ${base:+--base-branch "$base"} \
+      --parent-worktree "$card" --setup skip --json)"
+    wt="$(printf '%s' "$out" | json "print(d['result']['worktree']['path'])")"
+    ln -s "$wt" "$dir/$repo"
+
+    rc=0; setup_worktree "$project" "$repo" "$src" "$wt" || rc=$?
+    case "$rc" in
+      0) status="đã tạo worktree, đã cài đặt" ;;
+      2) status="đã tạo worktree, chưa cài đặt (xem REPOS.md)" ;;
+      *) status="đã tạo worktree, cài đặt lỗi" ;;
+    esac
+
+    # Insert a row into the worktree table (above the marker line)
+    python3 - "$dir/TASK.md" "| $repo | \`$wt\` | \`$(git -C "$wt" branch --show-current)\` | $status | — |" <<'PY'
+import sys
+path, row = sys.argv[1], sys.argv[2]
+text = open(path).read()
+marker = "<!-- smit-task add: rows above -->"
+open(path, "w").write(text.replace(marker, row + "\n" + marker, 1))
+PY
+    log "$dir" "Tạo worktree $repo → \`$wt\` ($status)"
+    echo "$repo: $wt — $status"
+  done
+}
+
+cmd_close() {
+  local task="${1:-}" force="${2:-}" dir link wt dirty=0
+  kebab "$task"; dir="$ROOT/$task"
+  [ -d "$dir" ] || die "unknown task '$task'"
+  need_orca
+
+  # Refuse while any repo has uncommitted or unpushed work: removing a worktree deletes its local branch
+  for link in "$dir"/*; do
+    [ -L "$link" ] || continue
+    wt="$(readlink "$link")"
+    [ -d "$wt" ] || continue
+    if [ -n "$(git -C "$wt" status --porcelain)" ]; then
+      echo "$(basename "$link"): uncommitted changes" >&2; dirty=1
+    elif [ -n "$(git -C "$wt" log --oneline '@{upstream}..' 2>/dev/null || git -C "$wt" log --oneline 'origin/HEAD..')" ]; then
+      echo "$(basename "$link"): commits not pushed" >&2; dirty=1
+    fi
+  done
+  [ "$dirty" = 0 ] || [ "$force" = "--force" ] || die "refusing to close '$task' (use --force to discard)"
+
+  for link in "$dir"/*; do
+    [ -L "$link" ] || continue
+    wt="$(readlink "$link")"
+    [ -d "$wt" ] && orca worktree rm --worktree "path:$wt" ${force:+--force} >&2
+  done
+  [ -f "$dir/.orca-folder-id" ] && rpc folderWorkspace.delete "{\"folderWorkspaceId\":\"$(cat "$dir/.orca-folder-id")\"}" >/dev/null
+  rm -rf "$dir"
+  echo "closed $task"
+}
+
+case "${1:-}" in
+  init)  shift; cmd_init "$@" ;;
+  new)   shift; cmd_new "$@" ;;
+  add)   shift; cmd_add "$@" ;;
+  close) shift; cmd_close "$@" ;;
+  sync-settings) sync_settings ;;
+  *) sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+esac

@@ -1,0 +1,10 @@
+# Only the tool is versioned; tasks, project maps and machine settings stay local
+/*
+!/.gitignore
+!/README.md
+!/CLAUDE.md
+!/bin/
+!/templates/
+!/.claude/
+/.claude/*
+!/.claude/settings.json

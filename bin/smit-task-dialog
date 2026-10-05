@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Ask for a task name in a macOS dialog, then run `smit-task new` and bring Orca to the front.
+# Meant to be bound to a global hotkey through the macOS Shortcuts app ("Run Shell Script").
+set -uo pipefail
+
+# Shortcuts runs with a minimal PATH; orca, node tooling and python3 live here
+export PATH="/usr/local/bin:/opt/homebrew/bin:$HOME/.local/bin:/usr/bin:/bin:$PATH"
+HERE="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+
+alert() { osascript -e "display alert \"smit-task\" message \"$1\" as critical" >/dev/null; }
+
+raw="$(osascript -e 'text returned of (display dialog "Tên task mới (vd: vat-report hoặc \"Báo cáo VAT\"):" default answer "" with title "smit-task new" buttons {"Huỷ", "Tạo"} default button "Tạo" cancel button "Huỷ")' 2>/dev/null)" || exit 0
+
+# Free text → kebab-case ASCII ("Báo cáo VAT" → "bao-cao-vat")
+task="$(python3 -c '
+import re, sys, unicodedata
+s = sys.argv[1].replace("đ", "d").replace("Đ", "D")
+s = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode().lower()
+print(re.sub(r"[^a-z0-9]+", "-", s).strip("-"))
+' "$raw")"
+[ -n "$task" ] || { alert "Tên task trống."; exit 1; }
+
+if out="$("$HERE/smit-task" new "$task" 2>&1)"; then
+  open -a Orca
+  osascript -e "display notification \"Mở thẻ '$task' trong nhóm tasks rồi chạy claude\" with title \"Đã tạo task $task\"" >/dev/null
+else
+  alert "$(printf '%s' "$out" | tail -1 | tr '"' "'")"
+  exit 1
+fi

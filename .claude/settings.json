@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(smit-task:*)"
+    ],
+    "deny": [
+      "Bash(git push:*)",
+      "Bash(gh pr create:*)"
+    ]
+  }
+}
