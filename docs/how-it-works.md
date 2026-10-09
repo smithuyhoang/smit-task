@@ -66,13 +66,13 @@ Gõ `smit-task new them-bo-loc`, mở thẻ trong Orca, gõ `claude`, rồi nói
 5. Code BE trước, viết test. Rồi code FE khớp với API vừa làm, chạy test và lint.
 6. Cập nhật bảng sau mỗi bước, cuối cùng commit local từng repo và báo thứ tự deploy.
 
-Người dùng xem diff, tự push và tạo PR. Merge xong thì `close`.
+Người dùng xem diff. Muốn mở PR thì gõ `/task-ship`: Claude rebase, test lại, cho một agent khác (không biết gì về cách code được viết) soát lỗi, chấm rủi ro bằng luật cố định, rồi push và mở **Draft PR** có bảng rủi ro + ảnh. Người dùng đọc PR, bấm Ready, merge. Merge xong thì `close`.
 
 ## 7. Hàng rào an toàn
 Claude làm tự động nhưng có giới hạn:
 - **Không sửa được repo gốc**, chỉ sửa trong worktree. Cái này cài cứng bằng quyền, không chỉ dặn bằng lời.
 - **Không đọc `.env`** (file chứa mật khẩu).
-- **Không push, không tạo PR.** Bước đưa code lên luôn do người làm.
+- **Chỉ push / mở Draft PR khi người dùng gõ `/task-ship`**, và Claude Code hỏi lại trước mỗi lệnh push/PR. Không bao giờ merge hay bấm Ready.
 - **Không chạy migration** lên DB thật.
 - `close` **không cho xóa** khi còn code chưa push, vì xóa worktree là mất luôn nhánh.
 - **Không biết sửa ở đâu thì dừng lại hỏi**, không sửa lung tung (xem mục dưới).
@@ -122,4 +122,4 @@ Có. Gắn vào Shortcuts của macOS, bấm phím, gõ tên task là tạo xong
 ---
 
 ## Bản 30 giây
-> Mình tạo một task và nói yêu cầu bằng lời. Claude tra bản đồ dự án để biết phải sửa BE nào, FE nào, hỏi mình xác nhận một lần, rồi tự tạo chỗ làm riêng cho từng repo, code, test và commit. Mọi thứ hiện trên một thẻ Orca và một file theo dõi. Claude không push và không đụng code gốc. Mình review rồi tự đẩy lên.
+> Mình tạo một task và nói yêu cầu bằng lời. Claude tra bản đồ dự án để biết phải sửa BE nào, FE nào, viết bản thoả thuận API cho mình duyệt một lần, rồi tự tạo chỗ làm riêng cho từng repo, giao agent code, kiểm tra, review và commit. Mọi thứ hiện trên một thẻ Orca và một file theo dõi. Claude không đụng code gốc. Mình bảo "ship" thì nó mở Draft PR kèm bảng rủi ro; mình duyệt và merge.

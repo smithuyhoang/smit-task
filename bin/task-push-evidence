@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# Upload evidence files (PNG, webm, smoke.json) to the orphan branch `pr-evidence`
+# under <branch-slug>/ without touching the worktree's checkout or index.
+# Usage: task-push-evidence <worktree> <file> [<file>...]
+# Stdout: one line per file: "<name> <url>" — url points at the pushed commit,
+# so it renders in the PR for anyone who can read the repo.
+set -euo pipefail
+
+WT="${1:?worktree required}"
+shift
+[ $# -gt 0 ] || { echo "at least one file required" >&2; exit 1; }
+
+BRANCH="$(git -C "$WT" symbolic-ref --short HEAD)"
+SLUG="$(tr -c 'a-zA-Z0-9._\n-' '-' <<<"$BRANCH")"
+REPO_NWO="$(gh repo view "$(git -C "$WT" remote get-url origin)" --json nameWithOwner -q .nameWithOwner)"
+
+# Build the new tree in a throwaway index on top of the current pr-evidence tip (if any)
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
+export GIT_INDEX_FILE="$TMP/index"
+PARENT=""
+if git -C "$WT" fetch -q origin pr-evidence 2>/dev/null; then
+  PARENT="$(git -C "$WT" rev-parse FETCH_HEAD)"
+  git -C "$WT" read-tree "$PARENT"
+else
+  git -C "$WT" read-tree --empty
+fi
+
+for f in "$@"; do
+  BLOB="$(git -C "$WT" hash-object -w "$f")"
+  git -C "$WT" update-index --add --cacheinfo "100644,$BLOB,$SLUG/$(basename "$f")"
+done
+
+TREE="$(git -C "$WT" write-tree)"
+COMMIT="$(git -C "$WT" commit-tree "$TREE" ${PARENT:+-p "$PARENT"} -m "evidence: $BRANCH")"
+# Plain push: a concurrent upload makes this non-fast-forward and fails loudly instead of overwriting
+git -C "$WT" push -q origin "$COMMIT:refs/heads/pr-evidence" >&2
+
+for f in "$@"; do
+  echo "$(basename "$f") https://github.com/$REPO_NWO/blob/$COMMIT/$SLUG/$(basename "$f")?raw=true"
+done

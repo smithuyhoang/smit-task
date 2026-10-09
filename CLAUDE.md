@@ -48,11 +48,17 @@ Task hiện tại = tên thư mục đang đứng (`basename $PWD`); dự án = 
 1. **Ghi yêu cầu** nguyên văn vào `TASK.md` → "Yêu cầu".
 2. **Định tuyến**: đọc `../projects/<dự-án>/REPOS.md` (bản đồ có trỏ tới tài liệu khác thì đọc theo), rồi `repos/<repo>.md` của repo ứng viên, rồi `grep` có mục tiêu trong repo gốc (đường dẫn ở `repos.txt`) để **tìm được file cụ thể** sẽ sửa. Không quét mọi repo, không đoán từ tên repo.
 3. **Ghi vào `TASK.md` → "Định tuyến"**: repo nào sửa + lý do + file dự kiến, repo nào KHÔNG sửa + lý do.
-4. **Hỏi người dùng xác nhận 1 lần** (AskUserQuestion). Đây là điểm dừng duy nhất trước khi code, trừ khi yêu cầu mơ hồ hoặc gặp mục "Không biết sửa ở đâu" dưới đây.
-5. `smit-task add <task> <repo...>`. Repo báo "chưa cài đặt"/"cài đặt lỗi" → cài theo cột "Cài đặt" trong `REPOS.md`.
-6. **Làm từng repo** qua `smit-tasks/<task>/<repo>/`: đọc `CLAUDE.md` của repo đó trước (không có thì đọc `../projects/<dự-án>/repos/<repo>.md`), code, viết/chạy test, lint. Thứ tự theo "Thứ tự deploy" trong `REPOS.md` (thường DB → BE → FE). BE và FE phải khớp nhau (tên API, field, kiểu dữ liệu).
-7. **Cập nhật bảng "Worktree đang xử lý"** sau mỗi bước của mỗi repo (`đang code` → `test pass`/`test lỗi: …` → `đã commit <sha>`) và thêm 1 dòng "Nhật ký".
-8. Xong: commit **local** từng repo, báo kết quả + thứ tự deploy. Không push.
+4. **Contract**: chép `../templates/contract.md` → `contract.md` trong thư mục task, điền mọi mục (DB / API / FE / Kiểm tra), xoá mục không cần. Chưa biết → ghi vào "Câu hỏi mở", không bịa.
+5. **Hỏi người dùng duyệt 1 lần** (AskUserQuestion): danh sách repo + `contract.md` + câu hỏi mở. Duyệt / Sửa (sửa rồi hỏi lại) / Huỷ (trạng thái `huỷ`, không tạo gì). Đây là điểm dừng duy nhất trước khi code, trừ khi gặp mục "Không biết sửa ở đâu" dưới đây.
+6. `smit-task add <task> <repo...>`. Repo báo "chưa cài đặt"/"cài đặt lỗi" → cài theo mục "Cài đặt" trong `REPOS.md`.
+7. **Giao agent code** (Agent tool), theo "Thứ tự deploy" trong `REPOS.md`: `task-db` trước, rồi `task-be` ∥ `task-fe` (song song, chạy nền). Mỗi agent 1 repo, prompt chỉ gồm `contract: <đường dẫn tuyệt đối>`, `cwd: <worktree>`, `map: <REPOS.md>`, "DO NOT COMMIT OR PUSH".
+   Agent trả `BLOCKED`/`NEEDS_CONTEXT` → dừng, đưa câu hỏi của agent cho người dùng; không tự thử lại.
+   Task nhỏ 1 repo, sửa vài dòng → được tự code thay vì giao agent, nhưng vẫn qua bước 8–9.
+8. **Kiểm tra**: `task-verify` với contract + mọi worktree + đường dẫn repo gốc + `map`. `Mismatches > 0` hoặc test lỗi → báo người dùng, không commit.
+9. **Code review trước commit**: mỗi worktree `Skill(ak:code-review, "--pending")` (mọi lệnh git là `git -C <worktree>`), bỏ bước so contract (task-verify đã làm), chỉ diff chưa commit. Sửa lỗi Critical/Important + chất lượng (dùng lại helper sẵn có, bỏ code thừa, theo pattern xung quanh, thêm test cho logic mới). **Không đổi mục nào của contract** (method, path, field, cột, key i18n) — cần đổi thì để lại, báo người dùng. Có sửa → chạy lại `task-verify`.
+10. **Cập nhật bảng "Worktree đang xử lý"** sau mỗi bước của mỗi repo (`đang code` → `verify pass`/`verify lỗi: …` → `đã commit <sha>`) và thêm 1 dòng "Nhật ký".
+11. Xong: commit **local** từng repo (chỉ file agent báo + file bước 9 sửa), báo kết quả + thứ tự deploy (+ lệnh migration người dùng tự chạy). Không push.
+12. **Ship** chỉ khi người dùng bảo ("ship", "mở PR"): `/task-ship` — rebase, test lại, `task-review` soát lỗi độc lập, smoke/ảnh, `bin/task-risk` chấm rủi ro, push nhánh + **Draft PR** mỗi repo, link chéo. Không bao giờ merge / Ready.
 
 Cần thêm repo giữa chừng → **hỏi người dùng trước**, rồi `smit-task add <task> <repo>` (sửa được ngay, không cần khởi động lại), ghi lý do vào "Định tuyến".
 `REPOS.md` sai so với code → tin code, sửa `REPOS.md` và báo người dùng.
@@ -78,7 +84,7 @@ Khi dừng:
 ## Luật
 - Git chạy theo từng repo: `git -C smit-tasks/<task>/<repo> ...`. Mỗi repo 1 commit (conventional commits, tiếng Anh), 1 PR.
 - Chỉ sửa trong worktree có trong bảng của task này. Không sửa repo gốc (chỉ để tra cứu), không đụng worktree của task khác.
-- Không chạy migration lên DB thật, không in nội dung `.env`, không push / tạo PR.
+- Không chạy migration lên DB thật, không in nội dung `.env`. Push / tạo PR **chỉ qua `/task-ship`** khi người dùng bảo, và chỉ Draft PR; không merge, không Ready.
 - `smit-task close` (và `orca worktree rm`) xoá luôn nhánh local → chỉ đóng khi mọi repo đã push hoặc người dùng đồng ý `--force`.
 - Không dùng `orca worktree create --no-parent` cho task nhiều repo. Không tạo thêm nhóm `tasks` trong Orca; thấy trùng thì báo người dùng.
 - Dev server của repo nào chạy ở thẻ worktree con của repo đó trong Orca, không chạy ở thẻ task.

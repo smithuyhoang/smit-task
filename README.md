@@ -1,6 +1,6 @@
 # smit-task — giao việc nhiều repo cho Claude, dùng cho mọi dự án
 
-Bạn tạo task, giao việc bằng lời. Agent tự xác định cần sửa repo nào (BE, FE, migration…), hỏi bạn xác nhận **một lần**, rồi tự tạo worktree, code, test và commit local từng repo.
+Bạn tạo task, giao việc bằng lời. Agent tự xác định cần sửa repo nào (BE, FE, migration…), viết bản thoả thuận API giữa BE và FE (`contract.md`) để bạn duyệt **một lần**, rồi tự tạo worktree, giao agent code từng repo, kiểm tra, review và commit local. Bạn bảo "ship" thì nó mở **Draft PR**.
 
 > **1 task = 1 thư mục `smit-tasks/<task>/` = 1 thẻ trong Orca = 1 session Claude**
 
@@ -46,9 +46,9 @@ Thêm repo mới vào dự án: chạy lại `smit-task init <dự-án> <repo-m�
 | 1 | `smit-task new <tên-task> [dự-án]` (chỉ có 1 dự án thì bỏ qua tên dự án) |
 | 2 | Orca → nhóm **tasks** → bấm thẻ `<tên-task>` → mở terminal → gõ `claude` |
 | 3 | Giao việc bằng lời, ví dụ "Thêm bộ lọc theo ngày cho danh sách đơn hàng" |
-| 4 | Agent đề xuất repo cần sửa, bạn **xác nhận** |
-| 5 | Agent tạo worktree, code, test, commit local. Theo dõi ở `TASK.md` hoặc tab *Attached worktrees* trên thẻ |
-| 6 | Xem diff trong Orca, rồi **bạn** push và tạo PR (agent không push) |
+| 4 | Agent đề xuất repo cần sửa + `contract.md`, bạn **duyệt** |
+| 5 | Agent tạo worktree, giao agent `task-db`/`task-be`/`task-fe` code, `task-verify` đối chiếu contract, code review, commit local. Theo dõi ở `TASK.md` hoặc tab *Attached worktrees* trên thẻ |
+| 6 | Xem diff trong Orca. Muốn mở PR: gõ `/task-ship` → rebase, test lại, agent `task-review` soát lỗi độc lập, chấm rủi ro (`bin/task-risk`), push + **Draft PR** mỗi repo (Claude Code hỏi bạn trước mỗi lệnh push/PR). Không bao giờ merge |
 | 7 | Mọi PR đã merge → `smit-task close <tên-task>` |
 
 ## 5. Phím tắt tạo task (không bắt buộc)
@@ -64,6 +64,8 @@ Phím tắt dùng khi chỉ có 1 dự án. Có nhiều dự án thì dùng lệ
 - Chỉ có một nhóm `tasks` trong Orca.
 
 ## 7. Tuỳ biến cho dự án
+- **Luật rủi ro riêng:** `projects/<dự-án>/risk-rules.sh` (được `bin/task-risk` nạp; thêm lý do vào mảng `HIGH`/`MEDIUM`).
+- **Ảnh/smoke FE:** thêm mục "Preview ảnh FE" vào `REPOS.md` (lệnh `shot`/`smoke`) thì `task-verify` và `/task-ship` dùng; không có thì bỏ qua.
 - **Cài đặt worktree:** repo có `orca.yaml` (`scripts.setup`) thì lệnh đó tự chạy. Cần thêm bước (link `.env`, …) thì viết `projects/<dự-án>/setup-worktree.sh` (tham số: repo, đường dẫn gốc, worktree).
 - Dự án đã có tài liệu định tuyến sẵn thì `REPOS.md` chỉ cần trỏ tới tài liệu đó.
 

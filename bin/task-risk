@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# Rate the risk of a branch with fixed rules so the PR risk table is predictable.
+# Reviewer findings can only raise the level, never lower it.
+# Project-specific rules live in projects/<project>/risk-rules.sh: sourced with REPO, FILES, LINES set,
+# it appends reasons to the HIGH / MEDIUM arrays.
+# Usage: task-risk <worktree> <base-ref> [--project <p>] [--findings <findings.json>] [--smoke ok|errors|skipped]
+#   --smoke: result of the project's browser smoke for UI changes; omit when not applicable.
+# Stdout: {"repo":..,"level":"low|medium|high","changed_lines":N,"reasons":[..]}
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+WT="${1:?worktree required}"
+BASE="${2:?base ref required}"
+shift 2
+PROJECT=""; FINDINGS=""; SMOKE=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --project) PROJECT="$2"; shift 2 ;;
+    --findings) FINDINGS="$2"; shift 2 ;;
+    --smoke) SMOKE="$2"; shift 2 ;;
+    *) echo "unknown arg: $1" >&2; exit 1 ;;
+  esac
+done
+
+REPO="$(basename "$(git -C "$WT" remote get-url origin 2>/dev/null || git -C "$WT" rev-parse --show-toplevel)" .git)"
+FILES="$(git -C "$WT" diff --name-only "$BASE...HEAD")"
+LINES="$(git -C "$WT" diff --numstat "$BASE...HEAD" | awk '$1 != "-" { n += $1 + $2 } END { print n + 0 }')"
+
+HIGH=(); MEDIUM=()
+
+# Generic: migrations are hard to undo, big diffs are hard to review, UI not proven to load
+grep -qE '(^|/)migrations/' <<<"$FILES" && HIGH+=("có file migrations/")
+[ "$LINES" -gt 300 ] && MEDIUM+=("diff lớn: $LINES dòng")
+case "$SMOKE" in
+  errors) MEDIUM+=("smoke có lỗi console/HTTP") ;;
+  skipped) MEDIUM+=("smoke không chạy được (dev server/phiên login)") ;;
+esac
+
+RULES="$ROOT/projects/$PROJECT/risk-rules.sh"
+# shellcheck source=/dev/null
+[ -n "$PROJECT" ] && [ -f "$RULES" ] && . "$RULES"
+
+if [ -n "$FINDINGS" ]; then
+  CRIT="$(jq '[.findings[] | select(.severity == "critical")] | length' "$FINDINGS")"
+  HI="$(jq '[.findings[] | select(.severity == "high")] | length' "$FINDINGS")"
+  [ "$CRIT" -gt 0 ] && HIGH+=("review: $CRIT lỗi critical")
+  [ "$HI" -gt 0 ] && MEDIUM+=("review: $HI lỗi high")
+fi
+
+if [ ${#HIGH[@]} -gt 0 ]; then LEVEL=high
+elif [ ${#MEDIUM[@]} -gt 0 ]; then LEVEL=medium
+else LEVEL=low; fi
+
+printf '%s\n' ${HIGH[@]+"${HIGH[@]}"} ${MEDIUM[@]+"${MEDIUM[@]}"} \
+  | jq -R . | jq -s --arg repo "$REPO" --arg level "$LEVEL" --argjson lines "$LINES" \
+    '{repo: $repo, level: $level, changed_lines: $lines, reasons: map(select(. != "")) | unique}'
