@@ -45,7 +45,7 @@ Thêm repo mới vào dự án: chạy lại `smit-task init <dự-án> <repo-m�
 |---|---|
 | 1 | `smit-task new <tên-task> [dự-án]` (chỉ có 1 dự án thì bỏ qua tên dự án) |
 | 2 | Orca → nhóm **tasks** → bấm thẻ `<tên-task>` → mở terminal → gõ `claude` |
-| 3 | Giao việc bằng lời, ví dụ "Thêm bộ lọc theo ngày cho danh sách đơn hàng" |
+| 3 | Giao việc bằng lời hoặc `/task-build "<yêu cầu>"`, ví dụ `/task-build "Thêm bộ lọc theo ngày cho danh sách đơn hàng"` |
 | 4 | Agent đề xuất repo cần sửa + `contract.md`, bạn **duyệt** |
 | 5 | Agent tạo worktree, giao agent `task-db`/`task-be`/`task-fe` code, `task-verify` đối chiếu contract, code review, commit local. Theo dõi ở `TASK.md` hoặc tab *Attached worktrees* trên thẻ |
 | 6 | Xem diff trong Orca. Muốn mở PR: gõ `/task-ship` → rebase, test lại, agent `task-review` soát lỗi độc lập, chấm rủi ro (`bin/task-risk`), push + **Draft PR** mỗi repo (Claude Code hỏi bạn trước mỗi lệnh push/PR). Không bao giờ merge |

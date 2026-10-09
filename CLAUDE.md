@@ -42,6 +42,7 @@ Khi được yêu cầu "lập bản đồ dự án <p>" (kèm danh sách "repo 
    Repo chưa có `CLAUDE.md` riêng → đề xuất (không tự làm) đưa `repos/<repo>.md` vào repo đó qua một task.
 
 ## Khi được giao việc
+Giao bằng lời hoặc `/task-build "<yêu cầu>"` — cùng một luồng dưới đây (skill chỉ là lối vào, không có bước riêng).
 Task hiện tại = tên thư mục đang đứng (`basename $PWD`); dự án = nội dung `.project`.
 Đang đứng ở `smit-tasks/` (chưa có task) → đặt tên kebab-case, chạy `smit-task new <task> [dự-án]`, làm tiếp với `smit-tasks/<task>/` và báo người dùng mở thẻ đó trong Orca.
 
