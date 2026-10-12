@@ -12,6 +12,8 @@ Bạn tạo task, giao việc bằng lời. Agent tự xác định cần sửa 
 | macOS, Orca ≥ 1.4.203 (đang mở) | `orca status` |
 | Claude Code | `claude --version` |
 | git, python3 | `git --version && python3 --version` |
+| GitHub CLI đã đăng nhập, jq (cho `/task-ship`) | `gh auth status && jq --version` |
+| AgentKit (skill `ak:code-review`, dùng ở bước code review) | gõ `/ak:code-review` trong Claude Code |
 | Các repo của dự án đã clone về máy | — |
 
 **Orca → Settings:** chọn *Workspace directory* (nơi đặt worktree), bật *Nest workspaces*, *Branch prefix* = Git username.
@@ -39,6 +41,8 @@ Lệnh này:
 👉 **Đọc lại `REPOS.md` và sửa chỗ sai**, nhất là mục "Chưa rõ". Bản đồ đúng thì agent chọn repo đúng.
 
 Thêm repo mới vào dự án: chạy lại `smit-task init <dự-án> <repo-mới>`. Claude chỉ đọc repo mới, phần bản đồ đã duyệt giữ nguyên.
+
+`projects/` chỉ nằm trên máy bạn (không lên git): mỗi người tự `init` dự án của mình. Nhiều người cùng một dự án → đưa ghi chú quan trọng vào `CLAUDE.md` của repo dự án, lần lập bản đồ sau ở máy khác sẽ đọc lại.
 
 ## 4. Dùng hằng ngày
 | Bước | Bạn làm |
