@@ -1,6 +1,6 @@
 ---
 name: task-ship
-description: Ship a smit-tasks task after every repo is committed locally — rebase on the latest default branch, re-run tests, adversarial review in a fresh context, browser smoke with screenshots/video (when the project supports it), rule-based risk rating, then push and open one Draft PR per repo with the risk table and evidence. Only when the user explicitly asks to ship. Never merges.
+description: Ship a smit-tasks task after every repo is committed locally — rebase on the latest default branch, re-run tests, adversarial review in a fresh context, browser smoke with screenshots/video (when the project supports it), rule-based risk rating, then push and open one PR per repo (ready for review, not Draft) with the risk table and evidence. Only when the user explicitly asks to ship. Never merges.
 argument-hint: "[<repo>...]  (default: every repo in the task's worktree table)"
 ---
 
@@ -37,7 +37,7 @@ cwd: <WT>
 base: <BASE>
 map: <MAP>
 ```
-Save its JSON block to `OUT/findings.json`. Do not fix findings — they go in the PR. Any `critical` → still open the Draft PR, but say so first in the report.
+Save its JSON block to `OUT/findings.json`. Do not fix findings — they go in the PR. Any `critical` → still open the PR, but say so first in the report.
 
 ## 5. Smoke + evidence (only if MAP has a "Preview ảnh FE" section and this repo's diff touches UI files)
 Pages: contract "Preview pages", else ask the user once for `<name>=<path>`.
@@ -46,15 +46,15 @@ Run the `smoke` command MAP gives → exit 0 = `ok`, 2 = `errors`, 1 = `skipped`
 ## 6. Risk
 `$ROOT/bin/task-risk WT BASE --project $PROJECT --findings OUT/findings.json [--smoke ok|errors|skipped]` → `OUT/risk.json`. Never edit the level by judgment; if it looks wrong, report it as a rule to tune.
 
-## 7. Push + Draft PR
+## 7. Push + PR
 - `git -C WT push -u origin HEAD`; if the branch was pushed before and rebase rewrote it: `--force-with-lease`. Never push to the default branch.
 - Evidence (step 5): `$ROOT/bin/task-push-evidence WT <files…>` → URLs.
 - Fill `$ROOT/templates/pr-body.md` → `OUT/pr-body.md`, every section from files (risk.json, findings.json, test output, smoke.json, evidence URLs), not memory.
-- `gh pr create --draft --base <BASE without origin/> --head <branch> --title "$(git -C WT log --reverse --format=%s BASE..HEAD | head -1)" --body-file OUT/pr-body.md`. No `--reviewer`.
+- `gh pr create --base <BASE without origin/> --head <branch> --title "$(git -C WT log --reverse --format=%s BASE..HEAD | head -1)" --body-file OUT/pr-body.md`. No `--reviewer`.
 - Several repos: create all PRs, then `gh pr edit --body-file` each to fill "PR liên quan" with the others' URLs and merge order from MAP "Thứ tự deploy".
 
 ## 8. Report (Vietnamese)
-Per repo: PR URL · risk level + reasons · findings by severity · tests · smoke. Highest risk first. TASK: PR URL in Commit column, status `Draft PR`.
+Per repo: PR URL · risk level + reasons · findings by severity · tests · smoke. Highest risk first. TASK: PR URL in Commit column, status `PR mở`.
 
 ## Never
-Merge, mark Ready, add reviewers, push to the default branch, run migrations, start dev servers, log in, print `.env`, fix code the reviewer flagged, lower a risk level by judgment.
+Merge, enable auto-merge, open a Draft PR, add reviewers, push to the default branch, run migrations, start dev servers, log in, print `.env`, fix code the reviewer flagged, lower a risk level by judgment.

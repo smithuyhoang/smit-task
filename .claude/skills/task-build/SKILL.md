@@ -19,4 +19,4 @@ Follow `CLAUDE.md` → "Khi được giao việc" steps 1–11 with `$ARGUMENTS`
 Empty `$ARGUMENTS` → ask the user for the request first.
 
 ## 3. After commit
-Report as step 11 says, then mention `/task-ship` for Draft PRs. Do not run it unless the user asks.
+Report as step 11 says, then mention `/task-ship` to open PRs. Do not run it unless the user asks.

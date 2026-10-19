@@ -25,4 +25,4 @@ Task: `<task>`
 Thứ tự merge: <theo "Thứ tự deploy" trong REPOS.md, link từng PR>
 
 ---
-Draft do `/task-ship` mở. Người duyệt: xem Rủi ro + Bằng chứng → bấm **Ready for review** hoặc comment yêu cầu sửa.
+PR do `/task-ship` mở. Người duyệt: xem Rủi ro + Bằng chứng → approve rồi merge, hoặc comment yêu cầu sửa.
