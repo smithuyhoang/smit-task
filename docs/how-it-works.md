@@ -66,7 +66,7 @@ Gõ `smit-task new them-bo-loc`, mở thẻ trong Orca, gõ `claude`, rồi nói
 5. Code BE trước, viết test. Rồi code FE khớp với API vừa làm, chạy test và lint.
 6. Cập nhật bảng sau mỗi bước, cuối cùng commit local từng repo và báo thứ tự deploy.
 
-Người dùng xem diff. Muốn mở PR thì gõ `/task-ship`: Claude rebase, test lại, cho một agent khác (không biết gì về cách code được viết) soát lỗi, chấm rủi ro bằng luật cố định, rồi push và mở **PR** có bảng rủi ro + ảnh. Người dùng đọc PR rồi merge. Merge xong thì `close`.
+Người dùng xem diff. Muốn mở PR thì gõ `/task-ship`: Claude rebase, test lại, cho một agent khác (không biết gì về cách code được viết) soát lỗi. Có lỗi thì Claude dừng hỏi người dùng từng lỗi (AI tự sửa hoặc bỏ qua), sửa xong thì test và soát lại; còn lỗi chưa xử lý thì không push repo nào. Sau đó chấm rủi ro bằng luật cố định, rồi push và mở **PR** có bảng rủi ro + ảnh. Người dùng đọc PR rồi merge. Merge xong thì `close`.
 
 ## 7. Hàng rào an toàn
 Claude làm tự động nhưng có giới hạn:

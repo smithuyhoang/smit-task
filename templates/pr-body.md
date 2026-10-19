@@ -7,9 +7,9 @@
 Diff: <changed_lines> dòng · Rebase lên `<base>` lúc <YYYY-MM-DD HH:mm>
 
 ## Review đối kháng
-| Mức | File | Lỗi | Kịch bản |
-|---|---|---|---|
-| <severity> | `<file>:<line>` | <summary> | <scenario> |
+| Mức | File | Lỗi | Kịch bản | Xử lý |
+|---|---|---|---|---|
+| <severity> | `<file>:<line>` | <summary> | <scenario> | <Đã sửa `<sha>` \| Sếp duyệt bỏ qua> |
 
 <không có finding → "Reviewer độc lập không tìm thấy lỗi.">
 

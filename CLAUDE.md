@@ -59,7 +59,7 @@ Task hiện tại = tên thư mục đang đứng (`basename $PWD`); dự án = 
 9. **Code review trước commit**: mỗi worktree `Skill(ak:code-review, "--pending")` (mọi lệnh git là `git -C <worktree>`), bỏ bước so contract (task-verify đã làm), chỉ diff chưa commit. Sửa lỗi Critical/Important + chất lượng (dùng lại helper sẵn có, bỏ code thừa, theo pattern xung quanh, thêm test cho logic mới). **Không đổi mục nào của contract** (method, path, field, cột, key i18n) — cần đổi thì để lại, báo người dùng. Có sửa → chạy lại `task-verify`.
 10. **Cập nhật bảng "Worktree đang xử lý"** sau mỗi bước của mỗi repo (`đang code` → `verify pass`/`verify lỗi: …` → `đã commit <sha>`) và thêm 1 dòng "Nhật ký".
 11. Xong: commit **local** từng repo (chỉ file agent báo + file bước 9 sửa), báo kết quả + thứ tự deploy (+ lệnh migration người dùng tự chạy). Không push.
-12. **Ship** chỉ khi người dùng bảo ("ship", "mở PR"): `/task-ship` — rebase, test lại, `task-review` soát lỗi độc lập, smoke/ảnh, `bin/task-risk` chấm rủi ro, push nhánh + **PR** (thường, không Draft) mỗi repo, link chéo. Không bao giờ merge.
+12. **Ship** chỉ khi người dùng bảo ("ship", "mở PR"): `/task-ship` — rebase, test lại, `task-review` soát lỗi độc lập (có lỗi bất kỳ mức nào → dừng hỏi người dùng từng lỗi: AI tự sửa / bỏ qua, rồi test + review lại; còn lỗi chưa xử lý thì không push repo nào), smoke/ảnh, `bin/task-risk` chấm rủi ro, push nhánh + **PR** (thường, không Draft) mỗi repo, link chéo. Không bao giờ merge.
 
 Cần thêm repo giữa chừng → **hỏi người dùng trước**, rồi `smit-task add <task> <repo>` (sửa được ngay, không cần khởi động lại), ghi lý do vào "Định tuyến".
 `REPOS.md` sai so với code → tin code, sửa `REPOS.md` và báo người dùng.
