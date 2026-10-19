@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Multi-repo task helper: 1 task = 1 dir smit-tasks/<task> = 1 Orca folder card = 1 Claude session.
 #   smit-task init  <project> <repo|dir...>  register a project's repos, then Claude maps them (REPOS.md)
-#   smit-task new   <task> [project]         create task dir + Orca task card (group "tasks")
+#   smit-task new   <task> [project] [--card] create task dir + Orca task card (group "tasks");
+#                                            --card: bind to the Orca card this terminal runs in instead
 #   smit-task add   <task> <repo...>         create a worktree per repo attached to the card, run its setup
 #   smit-task close <task> [--force]         remove worktrees + card + task dir (refuses unpushed work)
 set -euo pipefail
@@ -125,9 +126,23 @@ cmd_init() {
 }
 
 cmd_new() {
-  local task="${1:-}" project="${2:-}" dir projects group_ids group_id id
+  local task="" project="" use_card="" arg dir projects group_ids group_id id f
+  for arg in "$@"; do
+    case "$arg" in
+      --card) use_card=1 ;;
+      *) if [ -z "$task" ]; then task="$arg"; else project="$arg"; fi ;;
+    esac
+  done
   kebab "$task"; dir="$ROOT/$task"
   [ -e "$dir" ] && die "$dir already exists"
+  if [ -n "$use_card" ]; then
+    # Orca sets ORCA_WORKSPACE_ID=folder:<id> in every terminal it opens on a folder card
+    [[ "${ORCA_WORKSPACE_ID:-}" == folder:* ]] || die "--card needs a terminal opened from an Orca folder card"
+    id="${ORCA_WORKSPACE_ID#folder:}"
+    for f in "$ROOT"/*/.orca-folder-id; do
+      [ "$(cat "$f" 2>/dev/null)" = "$id" ] && die "this card already belongs to task '$(basename "$(dirname "$f")")'"
+    done
+  fi
   projects="$(ls "$ROOT/projects" 2>/dev/null || true)"
   if [ -z "$project" ]; then
     case "$(printf '%s' "$projects" | grep -c .)" in
@@ -139,6 +154,20 @@ cmd_new() {
   [ -f "$ROOT/projects/$project/repos.txt" ] || die "unknown project '$project'"
   need_orca
 
+  mkdir -p "$dir"
+  sed -e "s/{{task}}/$task/g" -e "s/{{project}}/$project/g" "$ROOT/templates/TASK.md" > "$dir/TASK.md"
+  echo "$project" > "$dir/.project"
+  # Claude loads project settings from the cwd only; share the smit-tasks ones
+  ln -s ../.claude "$dir/.claude"
+
+  if [ -n "$use_card" ]; then
+    echo "$id" > "$dir/.orca-folder-id"
+    log "$dir" "Tạo task (dự án $project), dùng thẻ Orca hiện tại \`folder:$id\`"
+    echo "task:  $dir (project $project)"
+    echo "card:  folder:$id (current card; worktrees will show under its Attached worktrees)"
+    return
+  fi
+
   # Exactly one "tasks" group; never create a duplicate
   group_ids="$(rpc projectGroup.list | json "print('\n'.join(g['id'] for g in d['groups'] if g['name']=='tasks'))")"
   case "$(printf '%s' "$group_ids" | grep -c .)" in
@@ -147,14 +176,9 @@ cmd_new() {
     *) die "more than one Orca group named 'tasks'; fix it in Orca first" ;;
   esac
 
-  mkdir -p "$dir"
-  sed -e "s/{{task}}/$task/g" -e "s/{{project}}/$project/g" "$ROOT/templates/TASK.md" > "$dir/TASK.md"
-  echo "$project" > "$dir/.project"
   id="$(rpc folderWorkspace.create "{\"projectGroupId\":\"$group_id\",\"name\":\"$task\",\"folderPath\":\"$dir\"}" \
     | json "print(d['folderWorkspace']['id'])")" || { rm -rf "$dir"; die "could not create Orca card"; }
   echo "$id" > "$dir/.orca-folder-id"
-  # Claude loads project settings from the cwd only; share the smit-tasks ones
-  ln -s ../.claude "$dir/.claude"
   log "$dir" "Tạo task (dự án $project) + thẻ Orca \`folder:$id\`"
 
   echo "task:  $dir (project $project)"
@@ -230,7 +254,11 @@ cmd_close() {
     wt="$(readlink "$link")"
     [ -d "$wt" ] && orca worktree rm --worktree "path:$wt" ${force:+--force} >&2
   done
-  [ -f "$dir/.orca-folder-id" ] && rpc folderWorkspace.delete "{\"folderWorkspaceId\":\"$(cat "$dir/.orca-folder-id")\"}" >/dev/null
+  # Delete only the card `new` made for this dir; a card adopted with --card belongs to the user
+  if [ -f "$dir/.orca-folder-id" ] && rpc folderWorkspace.list \
+      | json "exit(not any(w['id']=='$(cat "$dir/.orca-folder-id")' and w['folderPath']=='$dir' for w in d['folderWorkspaces']))"; then
+    rpc folderWorkspace.delete "{\"folderWorkspaceId\":\"$(cat "$dir/.orca-folder-id")\"}" >/dev/null
+  fi
   rm -rf "$dir"
   echo "closed $task"
 }
@@ -241,5 +269,5 @@ case "${1:-}" in
   add)   shift; cmd_add "$@" ;;
   close) shift; cmd_close "$@" ;;
   sync-settings) sync_settings ;;
-  *) sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+  *) sed -n '2,/^[^#]/p' "$0" | sed '$d; s/^# \{0,1\}//'; exit 1 ;;
 esac

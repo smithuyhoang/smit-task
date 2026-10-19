@@ -55,6 +55,8 @@ Thêm repo mới vào dự án: chạy lại `smit-task init <dự-án> <repo-m�
 | 6 | Xem diff trong Orca. Muốn mở PR: gõ `/task-ship` → rebase, test lại, agent `task-review` soát lỗi độc lập (có lỗi → dừng hỏi bạn từng lỗi: AI tự sửa hoặc bỏ qua; hết lỗi mới tạo PR), chấm rủi ro (`bin/task-risk`), push + **PR** mỗi repo (Claude Code hỏi bạn trước mỗi lệnh push/PR). Không bao giờ merge |
 | 7 | Mọi PR đã merge → `smit-task close <tên-task>` |
 
+**Cách khác:** tự tạo 1 thẻ Orca trên thư mục `smit-tasks`, mở terminal của thẻ đó, gõ `claude` rồi `/task-build "<yêu cầu>"`. Agent gắn task vào chính thẻ này (`smit-task new <task> --card`), các worktree hiện ở tab *Attached worktrees* của nó. `smit-task close` giữ lại thẻ bạn tự tạo, chỉ gỡ worktree.
+
 ## 5. Phím tắt tạo task (không bắt buộc)
 Mở ứng dụng **Shortcuts** → **+** → ô "Search for apps and actions" gõ `Run Shell Script` rồi kéo vào giữa.
 Shell: `bash`. Nội dung: `~/smit-tasks/bin/smit-task-dialog` (thay bằng đường dẫn thật). Giữ nguyên Input và Pass Input.

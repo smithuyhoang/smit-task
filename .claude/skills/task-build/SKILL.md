@@ -10,7 +10,7 @@ Entry point for the task flow. The flow itself lives in smit-tasks `CLAUDE.md` �
 
 ## 1. Task context
 - Current dir is `smit-tasks/<task>/` (has `TASK.md` + `.project`) → use it.
-- Current dir is the smit-tasks root → pick a kebab-case task name from the request, run `smit-task new <task> [project]`, then work with `smit-tasks/<task>/` and tell the user to open that card in Orca.
+- Current dir is the smit-tasks root → follow `CLAUDE.md` → "Khi được giao việc" for the root case: inside an Orca card (`ORCA_WORKSPACE_ID=folder:<id>`) reuse the task bound to that card or run `smit-task new <task> [project] --card`; otherwise `smit-task new <task> [project]` and tell the user to open the new card.
 - Anywhere else → stop, tell the user to run it from smit-tasks or a task dir.
 - `TASK.md` already has a request and a status other than `mới tạo` → it is an ongoing task: read it and continue from where it stopped instead of starting over. Ask the user if the new request conflicts with it.
 

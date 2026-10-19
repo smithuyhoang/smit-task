@@ -21,9 +21,9 @@ smit-tasks/
 ## Công cụ: `smit-task`
 ```bash
 smit-task init  <dự-án> <repo|thư-mục...>   # đăng ký repo của 1 dự án + mở Claude lập bản đồ REPOS.md
-smit-task new   <task> [dự-án]              # tạo thư mục task + thẻ Orca
+smit-task new   <task> [dự-án] [--card]     # tạo thư mục task + thẻ Orca; --card: dùng thẻ Orca đang mở thay vì tạo thẻ mới
 smit-task add   <task> <repo...>            # tạo worktree nhánh <user>/<task>, gắn vào thẻ, chạy cài đặt, thêm dòng bảng TASK.md
-smit-task close <task> [--force]            # xoá worktree + thẻ + thư mục; từ chối nếu còn thay đổi chưa commit/push
+smit-task close <task> [--force]            # xoá worktree + thẻ (trừ thẻ dùng --card) + thư mục; từ chối nếu còn thay đổi chưa commit/push
 ```
 Tên repo = tên trong `orca repo list` (cột đầu của `repos.txt`).
 
@@ -44,7 +44,9 @@ Khi được yêu cầu "lập bản đồ dự án <p>" (kèm danh sách "repo 
 ## Khi được giao việc
 Giao bằng lời hoặc `/task-build "<yêu cầu>"` — cùng một luồng dưới đây (skill chỉ là lối vào, không có bước riêng).
 Task hiện tại = tên thư mục đang đứng (`basename $PWD`); dự án = nội dung `.project`.
-Đang đứng ở `smit-tasks/` (chưa có task) → đặt tên kebab-case, chạy `smit-task new <task> [dự-án]`, làm tiếp với `smit-tasks/<task>/` và báo người dùng mở thẻ đó trong Orca.
+Đang đứng ở `smit-tasks/` (chưa có task):
+- Có `ORCA_WORKSPACE_ID=folder:<id>` (Claude chạy trong 1 thẻ Orca) → thẻ đó là thẻ task, để worktree hiện ở tab *Attached worktrees* của nó. Task nào có `.orca-folder-id` = `<id>` thì làm tiếp task đó; chưa có → đặt tên kebab-case, chạy `smit-task new <task> [dự-án] --card`. Làm tiếp với `smit-tasks/<task>/`, không tạo thẻ mới.
+- Không có → đặt tên kebab-case, chạy `smit-task new <task> [dự-án]`, làm tiếp với `smit-tasks/<task>/` và báo người dùng mở thẻ đó trong Orca.
 
 1. **Ghi yêu cầu** nguyên văn vào `TASK.md` → "Yêu cầu".
 2. **Định tuyến**: đọc `../projects/<dự-án>/REPOS.md` (bản đồ có trỏ tới tài liệu khác thì đọc theo), rồi `repos/<repo>.md` của repo ứng viên, rồi `grep` có mục tiêu trong repo gốc (đường dẫn ở `repos.txt`) để **tìm được file cụ thể** sẽ sửa. Không quét mọi repo, không đoán từ tên repo.
