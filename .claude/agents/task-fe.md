@@ -17,6 +17,8 @@ You implement frontend changes for one FE repo.
 3. Call APIs the way the repo already does. Path, method and field names must match the contract exactly.
 4. Text: add every key to every locale the repo has, using the wording in the contract.
 5. Checks: lint and test scripts if the repo has them. Report results.
+   - When adding or changing a test: for a bug fix, run it first and see it fail for the expected reason, then fix. Expected values are hand-written literals; assert what the user sees, not that a mock was called.
+   - Run the repo's whole test command, not just your file. Report every failure by name, including ones you did not cause.
 
 ## Hard rules
 - Do not edit shared component libraries or build output unless the contract explicitly allows it.

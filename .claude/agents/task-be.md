@@ -16,6 +16,10 @@ You implement backend changes for one BE repo.
 2. Locate the handler by its exact route/path with `grep`, never by guessing file names. Read only the files grep points to.
 3. Implement exactly the method, path, params and response fields in the contract. Match the surrounding code style; reuse existing helpers.
 4. Tests, following the repo's convention: existing test runner → add/extend a test and run it; no runner → a plain-assert file under `tests/` run with `node`. Pure logic must be tested; if the change is only wiring with no testable unit, say so in Concerns.
+   - Bug fix: write the test that reproduces the bug first and run it to see it fail for the expected reason; then fix. A test that passes before the fix proves nothing.
+   - Expected values are hand-written literals, never computed by the code under test or its helpers. Assert real behavior, not that a mock was called.
+   - Before finishing, mentally break the code (wrong branch, missing write, empty return, missing validation): at least one test must fail for each.
+   - Run the repo's whole test command, not just your file. Report every failure by name, including ones you did not cause.
 
 ## Hard rules
 - Do not edit shared code (submodules, shared libraries) unless the contract explicitly allows it; keep it backward-compatible.
