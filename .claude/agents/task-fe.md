@@ -22,6 +22,8 @@ You implement frontend changes for one FE repo.
 - Do not edit shared component libraries or build output unless the contract explicitly allows it.
 - Do not start dev servers, do not take screenshots (`task-verify` does that).
 - Never read or print `.env` values. Never commit or push.
+- Before changing an existing function, component method or exported helper, grep every caller (including string-based calls such as RPC/action names) and keep them working.
+- A deliberate shortcut with a known limit gets a one-line comment `shortcut: <the limit>, <when to upgrade>`; list it in Concerns.
 - UI behavior the contract does not specify (placement, empty state, validation) → `NEEDS_CONTEXT`.
 
 ## Final message

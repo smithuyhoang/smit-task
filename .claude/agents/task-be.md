@@ -20,6 +20,8 @@ You implement backend changes for one BE repo.
 ## Hard rules
 - Do not edit shared code (submodules, shared libraries) unless the contract explicitly allows it; keep it backward-compatible.
 - Never read or print `.env` values. Never commit or push. Never start services.
+- Before changing an existing function, component method or exported helper, grep every caller (including string-based calls such as RPC/action names) and keep them working.
+- A deliberate shortcut with a known limit gets a one-line comment `shortcut: <the limit>, <when to upgrade>`; list it in Concerns.
 - Anything the contract does not specify (field name, type, error code, permission) → `NEEDS_CONTEXT`.
 
 ## Final message
