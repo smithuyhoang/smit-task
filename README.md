@@ -6,6 +6,20 @@ Bạn tạo task, giao việc bằng lời. Agent tự xác định cần sửa 
 
 *Worktree: bản sao của repo để làm trên nhánh riêng, không đụng thư mục gốc.*
 
+## Bắt đầu nhanh
+**Một lần trên mỗi máy**
+1. Cài đủ mục [1. Cần có](#1-cần-có), bật *Nest workspaces* trong Orca.
+2. Clone repo này và tạo lệnh `smit-task` ([2. Cài đặt](#2-cài-đặt-một-lần)). Đặt ở đâu cũng được, không cần ngang hàng với các repo dự án.
+3. `smit-task init <dự-án> <thư-mục-chứa-repo>` để lập bản đồ `REPOS.md` ([3. Khai báo dự án](#3-khai-báo-dự-án-một-lần-cho-mỗi-dự-án)). Bản đồ không lên git, **mỗi người tự chạy**. Thiếu bước này `/task-build` không biết sửa repo nào.
+
+**Mỗi lần giao việc**
+
+4. Trong Orca tạo 1 thẻ trỏ vào **đúng thư mục `smit-tasks`** (thư mục khác sẽ không có skill `/task-build`).
+5. Mở terminal **của thẻ đó** → gõ `claude`. Mở Claude ngoài Orca thì agent không biết thẻ nào, sẽ tạo thẻ mới.
+6. `/task-build "<yêu cầu>"` → duyệt `contract.md` → agent tạo worktree và gắn vào thẻ; tab *Attached worktrees* của thẻ hiện danh sách worktree agent đang xử lý. Muốn mở PR: `/task-ship`.
+
+Chi tiết từng bước ở các mục dưới.
+
 ## 1. Cần có
 | Thứ cần có | Kiểm tra |
 |---|---|
@@ -55,7 +69,7 @@ Thêm repo mới vào dự án: chạy lại `smit-task init <dự-án> <repo-m�
 | 6 | Xem diff trong Orca. Muốn mở PR: gõ `/task-ship` → rebase, test lại, agent `task-review` soát lỗi độc lập (có lỗi → dừng hỏi bạn từng lỗi: AI tự sửa hoặc bỏ qua; hết lỗi mới tạo PR), chấm rủi ro (`bin/task-risk`), push + **PR** mỗi repo (Claude Code hỏi bạn trước mỗi lệnh push/PR). Không bao giờ merge |
 | 7 | Mọi PR đã merge → `smit-task close <tên-task>` |
 
-**Cách khác:** tự tạo 1 thẻ Orca trên thư mục `smit-tasks`, mở terminal của thẻ đó, gõ `claude` rồi `/task-build "<yêu cầu>"`. Agent gắn task vào chính thẻ này (`smit-task new <task> --card`), các worktree hiện ở tab *Attached worktrees* của nó. `smit-task close` giữ lại thẻ bạn tự tạo, chỉ gỡ worktree.
+**Cách khác (bước 4–6 của [Bắt đầu nhanh](#bắt-đầu-nhanh)):** thay bước 1–2 bằng: tự tạo 1 thẻ Orca trên thư mục `smit-tasks`, mở terminal của thẻ đó, gõ `claude`. Khi bạn `/task-build`, agent gắn task vào chính thẻ này (`smit-task new <task> --card`) thay vì tạo thẻ mới, nên worktree hiện ở tab *Attached worktrees* của thẻ. Thẻ đã gắn task thì lần sau mở lại, agent làm tiếp task đó. `smit-task close` giữ lại thẻ bạn tự tạo, chỉ gỡ worktree.
 
 ## 5. Phím tắt tạo task (không bắt buộc)
 Mở ứng dụng **Shortcuts** → **+** → ô "Search for apps and actions" gõ `Run Shell Script` rồi kéo vào giữa.
