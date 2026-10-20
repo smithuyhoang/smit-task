@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Measure reviewer noise for one repo of a ship run: how many findings the user waived vs had fixed, per source.
+# Usage: task-noise <OUT dir> <task> <repo>
+# Reads OUT/resolved.json ({"findings":[{source:"review"|"security",severity,resolution:"fixed"|"waived",..}]})
+# and counts OUT/<source>-round-*.json as rounds. Entries without source count as "review";
+# merged "review+security" entries count for both sources and are also counted in "both".
+# Stdout: {"task":..,"repo":..,"review":{rounds,fixed,waived,noise_rate,waived_by_severity},"security":{..},"both":N}
+# noise_rate = waived / (fixed + waived); null when that source had no findings.
+set -euo pipefail
+
+OUT="${1:?OUT dir required}"
+TASK="${2:?task required}"
+REPO="${3:?repo required}"
+
+rounds() { find "$OUT" -maxdepth 1 -name "$1-round-*.json" 2>/dev/null | wc -l | tr -d ' '; }
+
+{ [ -f "$OUT/resolved.json" ] && cat "$OUT/resolved.json" || echo '{"findings":[]}'; } \
+  | jq --arg task "$TASK" --arg repo "$REPO" \
+       --argjson review_rounds "$(rounds review)" --argjson security_rounds "$(rounds security)" '
+    def stats($src; $rounds):
+      [.findings[] | select((.source // "review") | split("+") | index($src))] as $f
+      | ([$f[] | select(.resolution == "fixed")] | length) as $fixed
+      | ([$f[] | select(.resolution == "waived")] | length) as $waived
+      | { rounds: $rounds, fixed: $fixed, waived: $waived,
+          noise_rate: (if $fixed + $waived == 0 then null else ($waived / ($fixed + $waived)) end),
+          waived_by_severity: ([$f[] | select(.resolution == "waived")] | group_by(.severity)
+                               | map({key: .[0].severity, value: length}) | from_entries) };
+    { task: $task, repo: $repo,
+      review: stats("review"; $review_rounds),
+      security: stats("security"; $security_rounds),
+      both: ([.findings[] | select(.source == "review+security")] | length) }'

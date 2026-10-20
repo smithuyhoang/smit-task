@@ -7,14 +7,16 @@
 Diff: <changed_lines> dòng · Rebase lên `<base>` lúc <YYYY-MM-DD HH:mm>
 
 ## Review đối kháng
-| Mức | File | Lỗi | Kịch bản | Xử lý |
-|---|---|---|---|---|
-| <severity> | `<file>:<line>` | <summary> | <scenario> | <Đã sửa `<sha>` \| Sếp duyệt bỏ qua> |
+| Nguồn | Mức | File | Lỗi | Kịch bản | Xử lý |
+|---|---|---|---|---|---|
+| <review \| security \| review+security> | <severity> | `<file>:<line>` | <summary> | <scenario> | <Đã sửa `<sha>` \| Sếp duyệt bỏ qua> |
 
 <không có finding → "Reviewer độc lập không tìm thấy lỗi.">
+Số vòng review: <n> · Security: <đã chạy \| bỏ qua (diff không chạm vùng nhạy cảm)>
 
 ## Test
 - Test: `<command>` → <pass/fail count | repo không có test>
+- Lint / type / build: <mỗi cái: `<command>` → ok | không có>
 - Smoke: <ok | N lỗi (liệt kê) | không chạy: <lý do> | không áp dụng>
 
 ## Bằng chứng

@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Decide whether a diff touches security-sensitive files, so /task-ship only runs task-security when it may matter.
+# Matches whole name parts, not substrings: "src/api/bill.js", "apiClient.js", "authorize.js" match;
+# "capital.js", "therapies.js", "tokenizer.js" do not.
+# Usage: git diff --name-only BASE...HEAD | task-sensitive
+# Stdout: matching paths. Exit 0 if any matched, 1 if none.
+set -euo pipefail
+
+WORDS='auth|authn|authz|permissions?|roles?|acl|middlewares?|guards?|routes?|router|api|migrations?|env|secrets?|tokens?|sessions?|login|logout|passwords?|credentials?|jwt|oauth|crypto'
+SEP='[/._-]'
+# 1) a whole part between separators, any case: "src/API/x.js", "check-role.js"
+# 2) camelCase/PascalCase start of a part: "apiClient.js", "AuthService.ts" (word any case, next letter upper)
+# 3) auth* words: "authorize.js", "authentication.ts"
+FILES="$(cat)"
+MATCHED="$( { grep -E -i "(^|$SEP)($WORDS)($SEP|$)" <<<"$FILES"
+              perl -ne "print if m{(^|$SEP)(?i:$WORDS)[A-Z0-9]}" <<<"$FILES"
+              grep -E -i "(^|$SEP)(authori[sz]|authenticat)" <<<"$FILES"; } | sort -u || true)"
+[ -n "$MATCHED" ] && printf '%s\n' "$MATCHED"
