@@ -66,7 +66,7 @@ Thêm repo mới vào dự án: chạy lại `smit-task init <dự-án> <repo-m�
 | 3 | Giao việc bằng lời hoặc `/task-build "<yêu cầu>"`, ví dụ `/task-build "Thêm bộ lọc theo ngày cho danh sách đơn hàng"` |
 | 4 | Agent đề xuất repo cần sửa + `contract.md`, bạn **duyệt** |
 | 5 | Agent tạo worktree, giao agent `task-db`/`task-be`/`task-fe` code, `task-verify` đối chiếu contract, code review, commit local. Theo dõi ở `TASK.md` hoặc tab *Attached worktrees* trên thẻ |
-| 6 | Xem diff trong Orca. Muốn mở PR: gõ `/task-ship` → rebase, test lại, agent `task-review` soát lỗi độc lập (có lỗi → dừng hỏi bạn từng lỗi: AI tự sửa hoặc bỏ qua; hết lỗi mới tạo PR), chấm rủi ro (`bin/task-risk`), push + **PR** mỗi repo (Claude Code hỏi bạn trước mỗi lệnh push/PR). Không bao giờ merge |
+| 6 | Xem diff trong Orca. Muốn mở PR: gõ `/task-ship` → rebase, test lại, agent `task-review` soát lỗi độc lập và `task-security` soát bảo mật (FE chỉ soát khi diff chạm vùng nhạy cảm) (có lỗi → dừng hỏi bạn từng lỗi: AI tự sửa hoặc bỏ qua; hết lỗi mới tạo PR), chấm rủi ro (`bin/task-risk`), push + **PR** mỗi repo (Claude Code hỏi bạn trước mỗi lệnh push/PR). PR đã mở mà cần sửa tiếp: commit thêm rồi gõ lại `/task-ship`, nó cập nhật PR cũ. Không bao giờ merge |
 | 7 | Mọi PR đã merge → `smit-task close <tên-task>` |
 
 **Cách khác (bước 4–6 của [Bắt đầu nhanh](#bắt-đầu-nhanh)):** thay bước 1–2 bằng: tự tạo 1 thẻ Orca trên thư mục `smit-tasks`, mở terminal của thẻ đó, gõ `claude`. Khi bạn `/task-build`, agent gắn task vào chính thẻ này (`smit-task new <task> --card`) thay vì tạo thẻ mới, nên worktree hiện ở tab *Attached worktrees* của thẻ. Thẻ đã gắn task thì lần sau mở lại, agent làm tiếp task đó. `smit-task close` giữ lại thẻ bạn tự tạo, chỉ gỡ worktree.

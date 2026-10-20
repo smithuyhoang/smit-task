@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Rate the risk of a branch with fixed rules so the PR risk table is predictable.
-# Reviewer findings can only raise the level, never lower it.
+# Reviewer findings can only raise the level, never lower it. Fixed critical/high findings (resolution "fixed") count as medium; the rest keep full weight.
 # Project-specific rules live in projects/<project>/risk-rules.sh: sourced with REPO, FILES, LINES set,
 # it appends reasons to the HIGH / MEDIUM arrays.
 # Usage: task-risk <worktree> <base-ref> [--project <p>] [--findings <findings.json>] [--smoke ok|errors|skipped]
@@ -41,10 +41,15 @@ RULES="$ROOT/projects/$PROJECT/risk-rules.sh"
 [ -n "$PROJECT" ] && [ -f "$RULES" ] && . "$RULES"
 
 if [ -n "$FINDINGS" ]; then
-  CRIT="$(jq '[.findings[] | select(.severity == "critical")] | length' "$FINDINGS")"
-  HI="$(jq '[.findings[] | select(.severity == "high")] | length' "$FINDINGS")"
+  # Open or waived findings keep the original weight; ones the AI already fixed still lift the level to medium
+  count() { jq --arg sev "$1" --arg fixed "$2" \
+    '[.findings[] | select(.severity == $sev and ((.resolution == "fixed") == ($fixed == "1")))] | length' "$FINDINGS"; }
+  CRIT="$(count critical 0)"; HI="$(count high 0)"
+  CRIT_FIXED="$(count critical 1)"; HI_FIXED="$(count high 1)"
   [ "$CRIT" -gt 0 ] && HIGH+=("review: $CRIT lỗi critical")
   [ "$HI" -gt 0 ] && MEDIUM+=("review: $HI lỗi high")
+  [ "$CRIT_FIXED" -gt 0 ] && MEDIUM+=("review: $CRIT_FIXED lỗi critical đã sửa trong lúc ship")
+  [ "$HI_FIXED" -gt 0 ] && MEDIUM+=("review: $HI_FIXED lỗi high đã sửa trong lúc ship")
 fi
 
 if [ ${#HIGH[@]} -gt 0 ]; then LEVEL=high

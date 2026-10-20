@@ -19,6 +19,9 @@ Số vòng review: <n> · Security: <đã chạy \| bỏ qua (diff không chạm
 - Lint / type / build: <mỗi cái: `<command>` → ok | không có>
 - Smoke: <ok | N lỗi (liệt kê) | không chạy: <lý do> | không áp dụng>
 
+## Triển khai
+<có file `migrations/` → liệt kê + chỗ tra lệnh migration theo REPOS.md (người dùng tự chạy) | "Không có migration">
+
 ## Bằng chứng
 <mỗi trang: `![<name>](<png url>)` + `[video <name>](<webm url>)`; không có → lý do>
 

@@ -13,10 +13,13 @@ Entry point for the task flow. The flow itself lives in smit-tasks `CLAUDE.md` �
 - Current dir is the smit-tasks root → follow `CLAUDE.md` → "Khi được giao việc" for the root case: inside an Orca card (`ORCA_WORKSPACE_ID=folder:<id>`) reuse the task bound to that card or run `smit-task new <task> [project] --card`; otherwise `smit-task new <task> [project]` and tell the user to open the new card.
 - Anywhere else → stop, tell the user to run it from smit-tasks or a task dir.
 - `TASK.md` already has a request and a status other than `mới tạo` → it is an ongoing task: read it and continue from where it stopped instead of starting over. Ask the user if the new request conflicts with it.
+  - Status `huỷ` → do not continue; ask the user (AskUserQuestion) whether to reopen it or start a new task.
+  - Status `PR mở` → the work is already shipped; ask the user whether the new request is a follow-up on the same PRs (commit on the same branches, then a repeat `/task-ship`) or a separate task.
 
 ## 2. Run the flow
 Follow `CLAUDE.md` → "Khi được giao việc" steps 1–11 with `$ARGUMENTS` as the request, including "Không biết sửa ở đâu → DỪNG" and the rules section.
 Empty `$ARGUMENTS` → ask the user for the request first.
+A commit blocked by a project hook (e.g. the FE preview hook in `REPOS.md`) → tell the user why and ask; bypass flags such as `SKIP_PREVIEW=1` only after they agree for that commit.
 
 ## 3. After commit
 Report as step 11 says, then mention `/task-ship` to open PRs. Do not run it unless the user asks.
